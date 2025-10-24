@@ -3,7 +3,7 @@ import logging
 import sqlite3
 from flask import Flask
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler, CallbackContext
 
 # Настройка Flask приложения
 app = Flask(__name__)
@@ -79,23 +79,23 @@ def get_siz_items(season):
     conn.close()
     return items
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def start(update: Update, context: CallbackContext):
     user = update.effective_user
-    await update.message.reply_text(f"Добро пожаловать, {user.first_name}!\n\nВведите ваш табельный номер:")
+    update.message.reply_text(f"Добро пожаловать, {user.first_name}!\n\nВведите ваш табельный номер:")
     return TABEL_NUMBER
 
-async def handle_tabel_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def handle_tabel_number(update: Update, context: CallbackContext):
     tabel_number = update.message.text.strip()
     
     if len(tabel_number) < 2:
-        await update.message.reply_text("Табельный номер слишком короткий. Попробуйте еще раз:")
+        update.message.reply_text("Табельный номер слишком короткий. Попробуйте еще раз:")
         return TABEL_NUMBER
     
     user = update.effective_user
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("INSERT OR REPLACE INTO users (user_id, tabel_number, full_name, position) VALUES (?, ?, ?, ?)",
-                  (user.id, tabel_number, f"{user.first_name}", "Электрик"))
+                  (user.id, tabel_number, f"{user.first_name}", "Электриk"))
     conn.commit()
     conn.close()
     
@@ -104,20 +104,20 @@ async def handle_tabel_number(update: Update, context: ContextTypes.DEFAULT_TYPE
     keyboard = [['🛡️ Заказать СИЗ'], ['🚨 Сообщить о нарушении'], ['📊 Статистика нарушений']]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     
-    await update.message.reply_text(f"Табельный номер {tabel_number} принят!\nВыберите действие:", reply_markup=reply_markup)
+    update.message.reply_text(f"Табельный номер {tabel_number} принят!\nВыберите действие:", reply_markup=reply_markup)
     return MAIN_MENU
 
-async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def main_menu(update: Update, context: CallbackContext):
     text = update.message.text
     
     if text == '🛡️ Заказать СИЗ':
         keyboard = [['Летний', 'Зимний'], ['↩️ Назад']]
         reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-        await update.message.reply_text("Выберите сезон СИЗ:", reply_markup=reply_markup)
+        update.message.reply_text("Выберите сезон СИЗ:", reply_markup=reply_markup)
         return SIZ_SEASON
         
     elif text == '🚨 Сообщить о нарушении':
-        await update.message.reply_text("Опишите нарушение (анонимно):", reply_markup=ReplyKeyboardMarkup([['↩️ Отмена']], resize_keyboard=True))
+        update.message.reply_text("Опишите нарушение (анонимно):", reply_markup=ReplyKeyboardMarkup([['↩️ Отмена']], resize_keyboard=True))
         return VIOLATION_REPORT
         
     elif text == '📊 Статистика нарушений':
@@ -130,14 +130,14 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn.close()
         
         stats_text = f"📊 Статистика\n\nВсего нарушений: {total_violations}\nВами зафиксировано: {user_violations}"
-        await update.message.reply_text(stats_text)
+        update.message.reply_text(stats_text)
         return MAIN_MENU
 
-async def siz_season(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def siz_season(update: Update, context: CallbackContext):
     text = update.message.text
     
     if text == '↩️ Назад':
-        return await back_to_main(update, context)
+        return back_to_main(update, context)
     
     context.user_data['season'] = text
     siz_items = get_siz_items(text)
@@ -148,14 +148,14 @@ async def siz_season(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard.append(['↩️ Назад'])
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    await update.message.reply_text(f"Выберите СИЗ для {text} сезона:", reply_markup=reply_markup)
+    update.message.reply_text(f"Выберите СИЗ для {text} сезона:", reply_markup=reply_markup)
     return SIZ_SELECTION
 
-async def siz_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def siz_selection(update: Update, context: CallbackContext):
     text = update.message.text
     
     if text == '↩️ Назад':
-        return await back_to_main(update, context)
+        return back_to_main(update, context)
     
     siz_name = text.split(' (')[0]
     
@@ -166,14 +166,14 @@ async def siz_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.commit()
     conn.close()
     
-    await update.message.reply_text(f"✅ Заказ оформлен: {siz_name} ({context.user_data['season']})")
-    return await back_to_main(update, context)
+    update.message.reply_text(f"✅ Заказ оформлен: {siz_name} ({context.user_data['season']})")
+    return back_to_main(update, context)
 
-async def violation_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def violation_report(update: Update, context: CallbackContext):
     text = update.message.text
     
     if text == '↩️ Отмена':
-        return await back_to_main(update, context)
+        return back_to_main(update, context)
     
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -182,34 +182,35 @@ async def violation_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.commit()
     conn.close()
     
-    await update.message.reply_text("✅ Нарушение отправлено анонимно!")
-    return await back_to_main(update, context)
+    update.message.reply_text("✅ Нарушение отправлено анонимно!")
+    return back_to_main(update, context)
 
-async def back_to_main(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def back_to_main(update: Update, context: CallbackContext):
     keyboard = [['🛡️ Заказать СИЗ'], ['🚨 Сообщить о нарушении'], ['📊 Статистика нарушений']]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    await update.message.reply_text("Главное меню:", reply_markup=reply_markup)
+    update.message.reply_text("Главное меню:", reply_markup=reply_markup)
     return MAIN_MENU
 
 def run_bot():
     init_database()
-    application = Application.builder().token(TOKEN).build()
+    updater = Updater(TOKEN, use_context=True)
     
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
-            TABEL_NUMBER: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_tabel_number)],
-            MAIN_MENU: [MessageHandler(filters.TEXT & ~filters.COMMAND, main_menu)],
-            SIZ_SEASON: [MessageHandler(filters.TEXT & ~filters.COMMAND, siz_season)],
-            SIZ_SELECTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, siz_selection)],
-            VIOLATION_REPORT: [MessageHandler(filters.TEXT & ~filters.COMMAND, violation_report)],
+            TABEL_NUMBER: [MessageHandler(Filters.text & ~Filters.command, handle_tabel_number)],
+            MAIN_MENU: [MessageHandler(Filters.text & ~Filters.command, main_menu)],
+            SIZ_SEASON: [MessageHandler(Filters.text & ~Filters.command, siz_season)],
+            SIZ_SELECTION: [MessageHandler(Filters.text & ~Filters.command, siz_selection)],
+            VIOLATION_REPORT: [MessageHandler(Filters.text & ~Filters.command, violation_report)],
         },
         fallbacks=[]
     )
     
-    application.add_handler(conv_handler)
-    print("🤖 Бот СИЗ запущен!")
-    application.run_polling()
+    updater.dispatcher.add_handler(conv_handler)
+    print("🤖 Бот СИЗ запущен на Render!")
+    updater.start_polling()
+    updater.idle()
 
 if __name__ == '__main__':
     run_bot()
