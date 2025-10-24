@@ -1,7 +1,7 @@
 services:
   - type: web
-    name: siz-bot
+    name: siz-bot-web
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python bot.py
+    startCommand: python app.py
