@@ -192,7 +192,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # --- Основная функция запуска ---
 def main():
     TOKEN = os.getenv("8377876772:AAF5-fmyqvVyzCOVALSNiytd_MiJBcTbSow")
-    if not TOKEN:
+    if not TOKEN:8377876772:AAF5-fmyqvVyzCOVALSNiytd_MiJBcTbSow
         raise ValueError("Не задан TELEGRAM_BOT_TOKEN в переменных окружения")
 
     application = Application.builder().token(TOKEN).build()
