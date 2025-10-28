@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
     COMPLAINT_ENTER_TAB_NUMBER,
     COMPLAINT_ENTER_TEXT,
     NORMATIVE_CHOOSE_ROLE,
-) = range(6)
+) = range(5)
 
 # Почта для отправки
 EMAIL_TO = "ivashov_mv@nlmk.com"
