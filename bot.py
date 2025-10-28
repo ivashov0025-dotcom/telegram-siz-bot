@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 EMAIL_TO = "ivashov_mv@nlmk.com"
 SMTP_SERVER = "smtp.gmail.com"  # или ваш SMTP (например, smtp.yandex.ru)
 SMTP_PORT = 587
-EMAIL_FROM = os.getenv("EMAIL_FROM")
+EMAIL_FROM = os.getenv("Ivashov_mv@nlmk.com")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 
 # Пример базы табельных номеров → должностей
@@ -191,7 +191,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # --- Основная функция запуска ---
 def main():
-    TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+    TOKEN = os.getenv("8377876772:AAF5-fmyqvVyzCOVALSNiytd_MiJBcTbSow")
     if not TOKEN:
         raise ValueError("Не задан TELEGRAM_BOT_TOKEN в переменных окружения")
 
