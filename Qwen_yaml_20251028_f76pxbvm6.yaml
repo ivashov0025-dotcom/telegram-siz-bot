@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: siz-bot
+    env: python
+    runtime: python-3.12.7
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python bot.py"
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
