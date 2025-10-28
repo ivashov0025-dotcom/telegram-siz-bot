@@ -9,9 +9,6 @@ from telegram.ext import (
     ContextTypes,
     ConversationHandler,
 )
-import aiosmtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 
 # Настройка логирования
 logging.basicConfig(
@@ -28,13 +25,6 @@ logger = logging.getLogger(__name__)
     COMPLAINT_ENTER_TEXT,
     NORMATIVE_CHOOSE_ROLE,
 ) = range(5)
-
-# Настройки email
-EMAIL_TO = "ivashov_mv@nlmk.com"
-SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 587
-EMAIL_FROM = os.getenv("EMAIL_FROM")
-EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 
 # База: табельный номер → должность
 TAB_TO_ROLE = {
@@ -64,28 +54,6 @@ SIZ_BY_ROLE = {
 
 AVAILABLE_ROLES = list(SIZ_BY_ROLE.keys())
 NORMATIVE_DOCS_DIR = "normative_docs"
-
-
-# --- Вспомогательная функция отправки email ---
-async def send_email(subject: str, body: str):
-    msg = MIMEMultipart()
-    msg["From"] = EMAIL_FROM
-    msg["To"] = EMAIL_TO
-    msg["Subject"] = subject
-    msg.attach(MIMEText(body, "plain", "utf-8"))
-
-    try:
-        await aiosmtplib.send(
-            msg,
-            hostname=SMTP_SERVER,
-            port=SMTP_PORT,
-            start_tls=True,
-            username=EMAIL_FROM,
-            password=EMAIL_PASSWORD,
-        )
-        logger.info("Email sent successfully")
-    except Exception as e:
-        logger.error(f"Failed to send email: {e}")
 
 
 # --- Обработчики ---
@@ -149,11 +117,11 @@ async def siz_enter_tab(update: Update, context: ContextTypes.DEFAULT_TYPE):
     siz_list = "\n".join([f"• {item}" for item in SIZ_BY_ROLE[role]])
     await update.message.reply_text(
         f"Для должности «{role}» положены следующие СИЗ:\n{siz_list}\n\n"
-        "Заявка автоматически отправлена на ivashov_mv@nlmk.com."
+        "✅ Заявка принята. Администратор получит уведомление."
     )
 
-    body = f"Заявка на СИЗ\nТабельный номер: {tab_num}\nДолжность: {role}\nСИЗ:\n{siz_list}"
-    await send_email("Заявка на СИЗ", body)
+    # Логируем заявку (видно в логах Render)
+    logger.info(f"НОВАЯ ЗАЯВКА НА СИЗ | Табельный: {tab_num} | Должность: {role} | СИЗ: {siz_list}")
     return MAIN_MENU
 
 
@@ -172,10 +140,10 @@ async def complaint_enter_text(update: Update, context: ContextTypes.DEFAULT_TYP
     complaint_text = update.message.text.strip()
     tab_num = context.user_data.get("complaint_tab", "не указан")
 
-    await update.message.reply_text("Ваша жалоба отправлена анонимно на ivashov_mv@nlmk.com.")
+    await update.message.reply_text("✅ Ваша жалоба отправлена анонимно.")
 
-    body = f"Анонимная жалоба\nТабельный номер (внутренний): {tab_num}\nТекст жалобы:\n{complaint_text}"
-    await send_email("Анонимная жалоба", body)
+    # Логируем жалобу (анонимно для пользователя, но с таб. номером для админа — в логах)
+    logger.info(f"АНОНИМНАЯ ЖАЛОБА | Табельный (внутр.): {tab_num} | Текст: {complaint_text}")
     return MAIN_MENU
 
 
@@ -205,9 +173,6 @@ def main():
     TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
     if not TOKEN:
         raise ValueError("Не задан TELEGRAM_BOT_TOKEN в переменных окружения")
-
-    if not EMAIL_FROM or not EMAIL_PASSWORD:
-        raise ValueError("Не заданы EMAIL_FROM или EMAIL_PASSWORD в переменных окружения")
 
     application = Application.builder().token(TOKEN).build()
 
